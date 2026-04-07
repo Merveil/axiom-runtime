@@ -81,6 +81,7 @@ def replay(
     event_id: str,
     base_url: str = "http://127.0.0.1:8000",
     mode: ReplayMode = ReplayMode.strict,
+    rules: str | None = typer.Option(None, "--rules", help="Path to a JSON file with invariant rules."),
 ) -> None:
     """Replay a recorded HTTP event and classify reproducibility."""
     storage = EventStorage()
@@ -89,6 +90,19 @@ def replay(
     if not event:
         typer.echo(f"Event not found: {event_id}")
         raise typer.Exit(code=1)
+
+    invariant_rules: dict[str, object] = {}
+    if rules:
+        import pathlib
+        rules_path = pathlib.Path(rules)
+        if not rules_path.exists():
+            typer.echo(f"Rules file not found: {rules}")
+            raise typer.Exit(code=1)
+        try:
+            invariant_rules = json.loads(rules_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            typer.echo(f"Failed to parse rules file: {exc}")
+            raise typer.Exit(code=1)
 
     async def _run() -> None:
         replayer = EventReplayer(base_url=base_url)
@@ -120,7 +134,7 @@ def replay(
                 invariant_match, violations = compare_json_with_invariants(
                     json.loads(original_body),
                     json.loads(replay_body),
-                    rules={},  # V1: empty — user-configurable later
+                    rules=invariant_rules,
                 )
             except Exception:
                 pass

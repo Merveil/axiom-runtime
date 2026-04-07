@@ -1,0 +1,5 @@
+{
+  "double": { "tolerance": 2 },
+  "duration_ms": { "ignore": true },
+  "timestamp": { "ignore": true }
+}
