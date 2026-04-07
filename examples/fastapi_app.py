@@ -32,3 +32,8 @@ async def sometimes_fails(flag: int = 0) -> dict[str, object]:
     if flag == 1:
         raise ValueError("Simulated failure")
     return {"ok": True, "flag": flag}
+
+
+@app.get("/boom")
+async def boom() -> dict[str, object]:
+    raise RuntimeError("Axiom demo failure")
