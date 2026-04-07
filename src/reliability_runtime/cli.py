@@ -37,18 +37,34 @@ def compare_response_bodies(original_body: str, replay_body: str) -> tuple[bool,
 
 
 @app.command()
-def list_events() -> None:
-    """List recorded events."""
+def list_events(
+    route: str | None = typer.Option(None, "--route", help="Filter by request path (substring match)."),
+    method: str | None = typer.Option(None, "--method", help="Filter by HTTP method (e.g. GET, POST)."),
+    status: int | None = typer.Option(None, "--status", help="Filter by response status code."),
+    limit: int | None = typer.Option(None, "--limit", help="Maximum number of events to display."),
+) -> None:
+    """List recorded events, with optional filters."""
     storage = EventStorage()
     events = storage.list_events()
+
+    if route:
+        events = [e for e in events if route in e.request.path]
+    if method:
+        events = [e for e in events if e.request.method.upper() == method.upper()]
+    if status:
+        events = [e for e in events if e.response.status_code == status]
+    if limit is not None:
+        events = events[-limit:]
+
     if not events:
         typer.echo("No recorded events found.")
         raise typer.Exit(code=0)
 
     for event in events:
+        exception_flag = " 🔥" if event.exception else ""
         typer.echo(
             f"{event.event_id} | {event.request.method} {event.request.path} | "
-            f"status={event.response.status_code} | {event.response.duration_ms:.2f}ms"
+            f"status={event.response.status_code} | {event.response.duration_ms:.2f}ms{exception_flag}"
         )
 
 
