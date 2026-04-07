@@ -2,14 +2,12 @@ from __future__ import annotations
 
 import asyncio
 import json
-from dataclasses import dataclass
 from enum import Enum
 
 import typer
 
 from .replayer import EventReplayer
 from .schema_drift import detect_schema_drift
-from .schemas import RuntimeEvent
 from .storage import EventStorage
 
 app = typer.Typer(help="Reliability Runtime CLI")
@@ -38,66 +36,32 @@ def compare_response_bodies(original_body: str, replay_body: str) -> tuple[bool,
         return original_body == replay_body, "text"
 
 
-@dataclass
-class ReplayResult:
-    verdict: str
-    event_id: str
-    method: str
-    path: str
-    original_status: int
-    replay_status: int
-    body_match: bool
-    body_compare_mode: str
-    schema_drifts: list[str]
-    invariant_match: bool
-    violations: list[str]
-    original_body: str
-    replay_body: str
-    had_exception: bool
-    error: str | None = None
+def load_rules(rules_path: str) -> dict[str, object]:
+    with open(rules_path, encoding="utf-8") as f:
+        return json.load(f)  # type: ignore[no-any-return]
 
 
-async def _evaluate_event(
-    event: RuntimeEvent,
-    base_url: str,
+def classify_replay_result(
+    event: object,
+    replay_status: int,
+    replay_body: str,
     mode: ReplayMode,
-    invariant_rules: dict[str, object],
-) -> ReplayResult:
-    replayer = EventReplayer(base_url=base_url)
-    try:
-        response = await replayer.replay_http_event(event)
-    except Exception as exc:
-        return ReplayResult(
-            verdict="FAILED_TO_REPLAY",
-            event_id=event.event_id,
-            method=event.request.method,
-            path=event.request.path,
-            original_status=event.response.status_code,
-            replay_status=0,
-            body_match=False,
-            body_compare_mode="text",
-            schema_drifts=[],
-            invariant_match=False,
-            violations=[],
-            original_body=event.response.body_text or "",
-            replay_body="",
-            had_exception=event.exception is not None,
-            error=f"{type(exc).__name__}: {exc}",
-        )
+    rules: dict[str, object] | None = None,
+) -> dict[str, object]:
+    from .schemas import RuntimeEvent
+    assert isinstance(event, RuntimeEvent)
 
     original_status = event.response.status_code
-    replay_status = response.status_code
     original_body = event.response.body_text or ""
-    replay_body = response.text or ""
     original_had_exception = event.exception is not None
     replay_looks_like_error = replay_status >= 500
 
     status_match = replay_status == original_status
     body_match, body_compare_mode = compare_response_bodies(original_body, replay_body)
 
-    schema_drifts: list[str] = []
     invariant_match = True
     violations: list[str] = []
+    schema_drifts: list[str] = []
 
     if body_compare_mode == "json":
         try:
@@ -106,7 +70,7 @@ async def _evaluate_event(
             original_json = json.loads(original_body)
             replay_json = json.loads(replay_body)
             invariant_match, violations = compare_json_with_invariants(
-                original_json, replay_json, rules=invariant_rules,
+                original_json, replay_json, rules=rules or {},
             )
             schema_drifts = detect_schema_drift(original_json, replay_json)
         except Exception:
@@ -130,22 +94,20 @@ async def _evaluate_event(
         else:
             verdict = "DRIFT_DETECTED"
 
-    return ReplayResult(
-        verdict=verdict,
-        event_id=event.event_id,
-        method=event.request.method,
-        path=event.request.path,
-        original_status=original_status,
-        replay_status=replay_status,
-        body_match=body_match,
-        body_compare_mode=body_compare_mode,
-        schema_drifts=schema_drifts,
-        invariant_match=invariant_match,
-        violations=violations,
-        original_body=original_body,
-        replay_body=replay_body,
-        had_exception=original_had_exception,
-    )
+    return {
+        "verdict": verdict,
+        "original_status": original_status,
+        "replay_status": replay_status,
+        "original_body": original_body,
+        "replay_body": replay_body,
+        "status_match": status_match,
+        "body_match": body_match,
+        "body_compare_mode": body_compare_mode,
+        "invariant_match": invariant_match,
+        "violations": violations,
+        "schema_drifts": schema_drifts,
+        "original_had_exception": original_had_exception,
+    }
 
 
 @app.command()
@@ -210,7 +172,7 @@ def replay(
     event_id: str,
     base_url: str = "http://127.0.0.1:8000",
     mode: ReplayMode = ReplayMode.strict,
-    rules: str | None = typer.Option(None, "--rules", help="Path to a JSON file with invariant rules."),
+    rules_path: str | None = typer.Option(None, "--rules", help="Path to a JSON file with invariant rules."),
 ) -> None:
     """Replay a recorded HTTP event and classify reproducibility."""
     storage = EventStorage()
@@ -220,88 +182,78 @@ def replay(
         typer.echo(f"Event not found: {event_id}")
         raise typer.Exit(code=1)
 
-    invariant_rules: dict[str, object] = {}
-    if rules:
-        import pathlib
-        rules_path = pathlib.Path(rules)
-        if not rules_path.exists():
-            typer.echo(f"Rules file not found: {rules}")
-            raise typer.Exit(code=1)
-        try:
-            invariant_rules = json.loads(rules_path.read_text(encoding="utf-8"))
-        except Exception as exc:
-            typer.echo(f"Failed to parse rules file: {exc}")
-            raise typer.Exit(code=1)
+    rules = load_rules(rules_path) if rules_path else {}
 
     async def _run() -> None:
-        result = await _evaluate_event(event, base_url, mode, invariant_rules)
-
-        if result.verdict == "FAILED_TO_REPLAY":
+        replayer = EventReplayer(base_url=base_url)
+        try:
+            response = await replayer.replay_http_event(event)
+        except Exception as exc:
             typer.echo("Replay verdict: FAILED_TO_REPLAY")
-            typer.echo(f"Replay error: {result.error}")
+            typer.echo(f"Replay error: {type(exc).__name__}: {exc}")
             raise typer.Exit(code=1)
 
-        status_match = result.replay_status == result.original_status
+        result = classify_replay_result(
+            event=event,
+            replay_status=response.status_code,
+            replay_body=response.text or "",
+            mode=mode,
+            rules=rules,
+        )
 
         typer.echo(f"Replay mode: {mode.value}")
-        typer.echo(f"Replay status: {result.replay_status}")
-        typer.echo(f"Original status: {result.original_status}")
-        typer.echo(f"Body comparison mode: {result.body_compare_mode}")
-
-        if result.schema_drifts:
-            typer.echo("\n⚠️ Schema drift detected:")
-            for drift in result.schema_drifts[:10]:
-                typer.echo(f"- {drift}")
+        typer.echo(f"Replay status: {result['replay_status']}")
+        typer.echo(f"Original status: {result['original_status']}")
+        typer.echo(f"Body comparison mode: {result['body_compare_mode']}")
 
         if event.exception:
             typer.echo("\n🔥 Original execution had an exception")
             typer.echo(f"Type: {event.exception.type}")
             typer.echo(f"Message: {event.exception.message}")
 
-        if result.verdict == "REPRODUCIBLE_STRICT":
-            typer.echo("\nReplay verdict: REPRODUCIBLE_STRICT")
+        schema_drifts: list[str] = result["schema_drifts"]  # type: ignore[assignment]
+        violations: list[str] = result["violations"]  # type: ignore[assignment]
+
+        if schema_drifts:
+            typer.echo("\n⚠️ Schema drift detected:")
+            for drift in schema_drifts[:10]:
+                typer.echo(f"- {drift}")
+
+        if not result["invariant_match"] and violations:
+            typer.echo("\n⚠️ Invariant violations:")
+            for v in violations[:10]:
+                typer.echo(f"- {v}")
+
+        typer.echo(f"\nReplay verdict: {result['verdict']}")
+
+        if result["verdict"] == "REPRODUCIBLE_STRICT":
             typer.echo("✅ Exact response match: YES")
-        elif result.verdict == "REPRODUCIBLE_SEMANTIC":
-            typer.echo("\nReplay verdict: REPRODUCIBLE_SEMANTIC")
+        elif result["verdict"] == "REPRODUCIBLE_SEMANTIC":
             typer.echo("✅ Significant behavior reproduced")
-            if not result.body_match:
-                typer.echo("\nℹ️ Representation drift detected but behavior is considered equivalent")
-                typer.echo("\n--- Original body ---")
-                typer.echo(result.original_body)
-                typer.echo("\n--- Replay body ---")
-                typer.echo(result.replay_body)
-            if not result.invariant_match and result.violations:
-                typer.echo("\n⚠️ Invariant violations:")
-                for v in result.violations[:5]:
-                    typer.echo(f"- {v}")
         else:
-            typer.echo("\nReplay verdict: DRIFT_DETECTED")
             typer.echo("❌ Mismatch detected")
-            if not status_match:
-                typer.echo(f"Status mismatch: {result.original_status} -> {result.replay_status}")
-            if not result.body_match:
+            if not result["status_match"]:
+                typer.echo(f"Status mismatch: {result['original_status']} -> {result['replay_status']}")
+            if not result["body_match"]:
                 typer.echo("\n--- Original body ---")
-                typer.echo(result.original_body)
+                typer.echo(result["original_body"])
                 typer.echo("\n--- Replay body ---")
-                typer.echo(result.replay_body)
-            if result.violations:
-                typer.echo("\n⚠️ Invariant violations:")
-                for v in result.violations[:5]:
-                    typer.echo(f"- {v}")
+                typer.echo(result["replay_body"])
 
     asyncio.run(_run())
 
 
-@app.command()
+@app.command("check-regressions")
 def check_regressions(
     base_url: str = "http://127.0.0.1:8000",
     mode: ReplayMode = ReplayMode.semantic,
-    rules: str | None = typer.Option(None, "--rules", help="Path to invariant rules JSON file."),
+    rules_path: str | None = typer.Option(None, "--rules", help="Path to invariant rules JSON file."),
     route: str | None = typer.Option(None, "--route", help="Filter by request path (substring match)."),
     method: str | None = typer.Option(None, "--method", help="Filter by HTTP method."),
-    fail_fast: bool = typer.Option(False, "--fail-fast", help="Stop on first regression."),
+    status: int | None = typer.Option(None, "--status", help="Filter by response status code."),
+    limit: int = typer.Option(20, "--limit", help="Maximum number of events to check."),
 ) -> None:
-    """Replay all recorded events and report regressions."""
+    """Replay recorded events and summarize regressions."""
     storage = EventStorage()
     events = storage.list_events()
 
@@ -309,71 +261,86 @@ def check_regressions(
         events = [e for e in events if route in e.request.path]
     if method:
         events = [e for e in events if e.request.method.upper() == method.upper()]
+    if status is not None:
+        events = [e for e in events if e.response.status_code == status]
+    if limit > 0:
+        events = events[-limit:]
 
     if not events:
-        typer.echo("No recorded events found.")
+        typer.echo("No matching events found.")
         raise typer.Exit(code=0)
 
-    invariant_rules: dict[str, object] = {}
-    if rules:
-        import pathlib
-        rules_path = pathlib.Path(rules)
-        if not rules_path.exists():
-            typer.echo(f"Rules file not found: {rules}")
-            raise typer.Exit(code=1)
-        try:
-            invariant_rules = json.loads(rules_path.read_text(encoding="utf-8"))
-        except Exception as exc:
-            typer.echo(f"Failed to parse rules file: {exc}")
-            raise typer.Exit(code=1)
+    rules = load_rules(rules_path) if rules_path else {}
 
-    async def _run_all() -> list[ReplayResult]:
-        results: list[ReplayResult] = []
+    summary = {
+        "REPRODUCIBLE_STRICT": 0,
+        "REPRODUCIBLE_SEMANTIC": 0,
+        "DRIFT_DETECTED": 0,
+        "FAILED_TO_REPLAY": 0,
+    }
+    detailed: list[tuple[object, dict[str, object]]] = []
+
+    async def _run_all() -> None:
+        replayer = EventReplayer(base_url=base_url)
         for event in events:
-            result = await _evaluate_event(event, base_url, mode, invariant_rules)
-            results.append(result)
-            if fail_fast and result.verdict not in ("REPRODUCIBLE_STRICT", "REPRODUCIBLE_SEMANTIC"):
-                break
-        return results
+            try:
+                response = await replayer.replay_http_event(event)
+                result = classify_replay_result(
+                    event=event,
+                    replay_status=response.status_code,
+                    replay_body=response.text or "",
+                    mode=mode,
+                    rules=rules,
+                )
+            except Exception as exc:
+                result = {
+                    "verdict": "FAILED_TO_REPLAY",
+                    "error": f"{type(exc).__name__}: {exc}",
+                    "schema_drifts": [],
+                    "violations": [],
+                    "status_match": False,
+                    "body_match": False,
+                }
+            verdict: str = result["verdict"]  # type: ignore[assignment]
+            summary[verdict] = summary.get(verdict, 0) + 1
+            detailed.append((event, result))
 
-    typer.echo(f"Replaying {len(events)} event(s) against {base_url} [{mode.value} mode]...\n")
-    results = asyncio.run(_run_all())
+    asyncio.run(_run_all())
 
-    passed = [r for r in results if r.verdict in ("REPRODUCIBLE_STRICT", "REPRODUCIBLE_SEMANTIC")]
-    regressions = [r for r in results if r.verdict not in ("REPRODUCIBLE_STRICT", "REPRODUCIBLE_SEMANTIC")]
+    typer.echo(f"Checked: {len(events)} events")
+    typer.echo(f"Reproducible strict:   {summary['REPRODUCIBLE_STRICT']}")
+    typer.echo(f"Reproducible semantic: {summary['REPRODUCIBLE_SEMANTIC']}")
+    typer.echo(f"Drift detected:        {summary['DRIFT_DETECTED']}")
+    typer.echo(f"Failed to replay:      {summary['FAILED_TO_REPLAY']}")
 
-    if regressions:
-        s = "s" if len(regressions) > 1 else ""
-        typer.echo(f"⚠️  Regression detected ({len(regressions)} event{s}):\n")
-        for i, r in enumerate(regressions, 1):
-            status_info = (
-                str(r.original_status)
-                if r.replay_status == r.original_status
-                else f"{r.original_status} → {r.replay_status}"
+    interesting = [
+        (ev, res)
+        for ev, res in detailed
+        if res["verdict"] != "REPRODUCIBLE_STRICT"
+    ]
+
+    if interesting:
+        typer.echo("\nInteresting results:")
+        for ev, res in interesting[:20]:
+            from .schemas import RuntimeEvent
+            assert isinstance(ev, RuntimeEvent)
+            exception_flag = " 🔥" if ev.exception else ""
+            typer.echo(
+                f"- {ev.event_id} | {ev.request.method} {ev.request.path}{exception_flag} "
+                f"| verdict={res['verdict']}"
             )
-            exception_flag = " 🔥" if r.had_exception else ""
-            typer.echo(f"  [{i}] {r.method} {r.path}{exception_flag}  (id: {r.event_id[:8]})")
-            typer.echo(f"      Verdict : {r.verdict}")
-            typer.echo(f"      Status  : {status_info}")
-            if r.error:
-                typer.echo(f"      Error   : {r.error}")
-            if r.schema_drifts:
-                typer.echo("      Schema drift:")
-                for d in r.schema_drifts[:5]:
-                    typer.echo(f"        - {d}")
-            if r.violations:
-                typer.echo("      Invariant violations:")
-                for v in r.violations[:3]:
-                    typer.echo(f"        - {v}")
-            if not r.body_match and r.original_body and r.replay_body:
-                typer.echo(f"      Expected: {r.original_body[:120]}")
-                typer.echo(f"      Got:      {r.replay_body[:120]}")
-            typer.echo("")
+            if res["verdict"] == "FAILED_TO_REPLAY":
+                typer.echo(f"  error: {res['error']}")
+                continue
+            schema_drifts: list[str] = res["schema_drifts"]  # type: ignore[assignment]
+            violations: list[str] = res["violations"]  # type: ignore[assignment]
+            for drift in schema_drifts[:3]:
+                typer.echo(f"  schema: {drift}")
+            for violation in violations[:3]:
+                typer.echo(f"  invariant: {violation}")
+            if not res["body_match"] and res.get("original_body") and res.get("replay_body"):
+                typer.echo(f"  Expected: {str(res['original_body'])[:100]}")
+                typer.echo(f"  Got:      {str(res['replay_body'])[:100]}")
 
-    typer.echo("─" * 52)
-    if not regressions:
-        typer.echo(f"✅  All {len(passed)} event(s) reproduced successfully.")
-        raise typer.Exit(code=0)
-    else:
-        typer.echo(f"Results: {len(passed)} passed, {len(regressions)} regression(s)")
-        raise typer.Exit(code=1)
+    regressions = summary["DRIFT_DETECTED"] + summary["FAILED_TO_REPLAY"]
+    raise typer.Exit(code=1 if regressions else 0)
