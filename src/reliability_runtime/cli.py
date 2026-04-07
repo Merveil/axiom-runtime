@@ -112,6 +112,19 @@ def replay(
         status_match = replay_status == original_status
         body_match, body_compare_mode = compare_response_bodies(original_body, replay_body)
 
+        invariant_match = body_match
+        violations: list[str] = []
+        if body_compare_mode == "json":
+            try:
+                from reliability_runtime.invariants import compare_json_with_invariants
+                invariant_match, violations = compare_json_with_invariants(
+                    json.loads(original_body),
+                    json.loads(replay_body),
+                    rules={},  # V1: empty — user-configurable later
+                )
+            except Exception:
+                pass
+
         typer.echo(f"Replay mode: {mode.value}")
         typer.echo(f"Replay status: {replay_status}")
         typer.echo(f"Original status: {original_status}")
@@ -145,8 +158,8 @@ def replay(
         # semantic mode
         semantic_match = False
 
-        # Case 1: exact match is always semantically reproducible
-        if status_match and body_match:
+        # Case 1: exact match or invariant-passing match is always semantically reproducible
+        if status_match and (body_match or invariant_match):
             semantic_match = True
 
         # Case 2: original had exception and replay still expresses same failure class
@@ -167,12 +180,15 @@ def replay(
 
                 if not body_match:
                     typer.echo("\nℹ️ Representation drift detected but behavior is considered equivalent")
-
                     typer.echo("\n--- Original body ---")
                     typer.echo(original_body)
-
                     typer.echo("\n--- Replay body ---")
                     typer.echo(replay_body)
+
+                if not invariant_match and violations:
+                    typer.echo("\n⚠️ Invariant violations:")
+                    for v in violations[:5]:
+                        typer.echo(f"- {v}")
         else:
             typer.echo("\nReplay verdict: DRIFT_DETECTED")
             typer.echo("❌ Semantic mismatch detected")
@@ -182,8 +198,12 @@ def replay(
 
             typer.echo("\n--- Original body ---")
             typer.echo(original_body)
-
             typer.echo("\n--- Replay body ---")
             typer.echo(replay_body)
+
+            if violations:
+                typer.echo("\n⚠️ Invariant violations:")
+                for v in violations[:5]:
+                    typer.echo(f"- {v}")
 
     asyncio.run(_run())
