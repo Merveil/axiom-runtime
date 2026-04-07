@@ -1,0 +1,24 @@
+Metadata-Version: 2.4
+Name: reliability-runtime
+Version: 0.1.0
+Summary: Minimal reliability runtime starter for recording and replaying FastAPI requests
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: fastapi>=0.115.0
+Requires-Dist: uvicorn>=0.30.0
+Requires-Dist: httpx>=0.27.0
+Requires-Dist: pydantic>=2.8.0
+Requires-Dist: typer>=0.12.3
+
+# Reliability Runtime V1
+
+Minimal starter for a recording + replay system focused on FastAPI applications.
+
+## Install
+
+```bash
+python -m venv .venv
+source .venv/bin/activate  # Linux/macOS
+# or .venv\Scripts\Activate.ps1 on Windows PowerShell
+
+pip install -e .

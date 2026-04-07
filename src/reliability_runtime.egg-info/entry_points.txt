@@ -1,0 +1,2 @@
+[console_scripts]
+rrt = reliability_runtime.cli:app
