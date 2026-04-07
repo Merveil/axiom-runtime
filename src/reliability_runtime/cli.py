@@ -7,6 +7,7 @@ from enum import Enum
 import typer
 
 from .replayer import EventReplayer
+from .schema_drift import detect_schema_drift
 from .storage import EventStorage
 
 app = typer.Typer(help="Reliability Runtime CLI")
@@ -126,16 +127,23 @@ def replay(
         status_match = replay_status == original_status
         body_match, body_compare_mode = compare_response_bodies(original_body, replay_body)
 
-        invariant_match = body_match
+        schema_drifts: list[str] = []
+        invariant_match = True
         violations: list[str] = []
         if body_compare_mode == "json":
             try:
                 from reliability_runtime.invariants import compare_json_with_invariants
+
+                original_json = json.loads(original_body)
+                replay_json = json.loads(replay_body)
+
                 invariant_match, violations = compare_json_with_invariants(
-                    json.loads(original_body),
-                    json.loads(replay_body),
+                    original_json,
+                    replay_json,
                     rules=invariant_rules,
                 )
+
+                schema_drifts = detect_schema_drift(original_json, replay_json)
             except Exception:
                 pass
 
@@ -143,6 +151,11 @@ def replay(
         typer.echo(f"Replay status: {replay_status}")
         typer.echo(f"Original status: {original_status}")
         typer.echo(f"Body comparison mode: {body_compare_mode}")
+
+        if schema_drifts:
+            typer.echo("\n⚠️ Schema drift detected:")
+            for drift in schema_drifts[:10]:
+                typer.echo(f"- {drift}")
 
         if event.exception:
             typer.echo("\n🔥 Original execution had an exception")
@@ -172,16 +185,13 @@ def replay(
         # semantic mode
         semantic_match = False
 
-        # Case 1: exact match or invariant-passing match is always semantically reproducible
-        if status_match and (body_match or invariant_match):
+        if status_match and body_match and not schema_drifts:
             semantic_match = True
-
-        # Case 2: original had exception and replay still expresses same failure class
+        elif status_match and invariant_match and not schema_drifts:
+            semantic_match = True
         elif original_had_exception and replay_looks_like_error and status_match:
             semantic_match = True
-
-        # Case 3: non-exception path, matching status is acceptable semantic reproduction
-        elif not original_had_exception and status_match:
+        elif not original_had_exception and status_match and not schema_drifts:
             semantic_match = True
 
         if semantic_match:
