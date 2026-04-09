@@ -1,0 +1,83 @@
+{
+  "name": "chaos_corpus",
+  "version": "1.0",
+  "description": "Labeled calibration corpus for chaos fault injection scenarios.",
+  "rules_path": null,
+  "cases": [
+    {
+      "label": "slow-normal-ok",
+      "family": "normal",
+      "app": "chaos_stable",
+      "expected_verdict": "REPRODUCIBLE_STRICT",
+      "notes": "Stable /slow returns determistic body — no chaos, no drift",
+      "record": {
+        "method": "GET",
+        "uri": "/slow",
+        "body": null,
+        "expected_status": 200,
+        "expected_body": {"status": "ok", "delay_ms": 0},
+        "label": "slow-stable"
+      }
+    },
+    {
+      "label": "flaky-tolerable-stable-ok",
+      "family": "tolerable",
+      "app": "chaos_stable",
+      "expected_verdict": "REPRODUCIBLE_STRICT",
+      "notes": "Stable /flaky always 200 — proves no false-positive on benign endpoint",
+      "record": {
+        "method": "POST",
+        "uri": "/flaky",
+        "body": {},
+        "expected_status": 200,
+        "expected_body": {"status": "ok", "processed": true},
+        "label": "flaky-stable"
+      }
+    },
+    {
+      "label": "flaky-dangerous-500",
+      "family": "dangerous",
+      "app": "chaos_active",
+      "expected_verdict": "FAILED_TO_REPLAY",
+      "notes": "chaos_active with error_rate=1.0 always returns 500 — must be FAILED_TO_REPLAY",
+      "record": {
+        "method": "POST",
+        "uri": "/flaky",
+        "body": {},
+        "expected_status": 200,
+        "expected_body": {"status": "ok", "processed": true},
+        "label": "flaky-chaos"
+      }
+    },
+    {
+      "label": "down-dangerous-503",
+      "family": "dangerous",
+      "app": "chaos_active",
+      "expected_verdict": "FAILED_TO_REPLAY",
+      "notes": "chaos /down always returns 503 — must be FAILED_TO_REPLAY",
+      "record": {
+        "method": "GET",
+        "uri": "/down",
+        "body": null,
+        "expected_status": 200,
+        "expected_body": {"status": "ok"},
+        "label": "down-chaos"
+      }
+    },
+    {
+      "label": "empty-dangerous-drift",
+      "family": "dangerous",
+      "app": "chaos_active",
+      "expected_verdict": "DRIFT_DETECTED",
+      "notes": "chaos /empty returns HTTP 200 with empty body — status matches but body gone; DRIFT_DETECTED",
+      "record": {
+        "method": "GET",
+        "uri": "/empty",
+        "body": null,
+        "expected_status": 200,
+        "expected_body": {"status": "ok"},
+        "label": "empty-chaos"
+      }
+    }
+  ]
+}

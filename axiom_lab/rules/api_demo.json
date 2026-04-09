@@ -1,0 +1,38 @@
+{
+  "name": "api_demo_rules",
+  "version": "1.0",
+  "description": "Business rules for the API demo endpoints.",
+  "rules": [
+    {
+      "id": "R001",
+      "description": "request_id is a per-call UUID and must be ignored",
+      "type": "ignore_field",
+      "field": "request_id"
+    },
+    {
+      "id": "R002",
+      "description": "score may vary by ±0.02 without being flagged as a regression",
+      "type": "numeric_tolerance",
+      "field": "score",
+      "tolerance": 0.02
+    },
+    {
+      "id": "R003",
+      "description": "status field must always be present in health responses",
+      "type": "required_field",
+      "field": "status"
+    },
+    {
+      "id": "R004",
+      "description": "processed flag must be present in /drift responses",
+      "type": "required_field",
+      "field": "processed"
+    },
+    {
+      "id": "R005",
+      "description": "debug_token must never appear in production responses",
+      "type": "prohibited_field",
+      "field": "debug_token"
+    }
+  ]
+}

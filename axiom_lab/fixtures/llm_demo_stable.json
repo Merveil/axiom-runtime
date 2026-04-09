@@ -1,0 +1,28 @@
+[
+  {
+    "method": "POST",
+    "uri": "/v1/completions",
+    "body": {"prompt": "What is the answer to life, the universe, and everything?", "max_tokens": 50},
+    "expected_status": 200,
+    "expected_body": {
+      "id": "cmpl-00000000",
+      "object": "text_completion",
+      "choices": [{"text": "The answer is forty-two.", "index": 0, "finish_reason": "stop"}],
+      "usage": {"prompt_tokens": 10, "completion_tokens": 8, "total_tokens": 18}
+    },
+    "label": "POST /v1/completions — standard prompt"
+  },
+  {
+    "method": "POST",
+    "uri": "/v1/completions",
+    "body": {"prompt": "Summarise the key insight in one sentence.", "max_tokens": 30},
+    "expected_status": 200,
+    "expected_body": {
+      "id": "cmpl-00000000",
+      "object": "text_completion",
+      "choices": [{"text": "The answer is forty-two.", "index": 0, "finish_reason": "stop"}],
+      "usage": {"prompt_tokens": 10, "completion_tokens": 8, "total_tokens": 18}
+    },
+    "label": "POST /v1/completions — summary prompt"
+  }
+]

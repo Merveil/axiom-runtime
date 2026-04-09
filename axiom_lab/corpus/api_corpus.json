@@ -1,0 +1,98 @@
+{
+  "name": "api_corpus",
+  "version": "1.0",
+  "description": "Labeled calibration corpus for the API demo endpoints.",
+  "rules_path": null,
+  "cases": [
+    {
+      "label": "health-normal-strict",
+      "family": "normal",
+      "app": "api_stable",
+      "expected_verdict": "REPRODUCIBLE_STRICT",
+      "notes": "Static GET — always byte-identical; baseline for STRICT calibration",
+      "record": {
+        "method": "GET",
+        "uri": "/health",
+        "body": null,
+        "expected_status": 200,
+        "expected_body": {"status": "ok", "version": "1.0.0"},
+        "label": "health"
+      }
+    },
+    {
+      "label": "echo-normal-semantic",
+      "family": "normal",
+      "app": "api_stable",
+      "expected_verdict": "REPRODUCIBLE_SEMANTIC",
+      "notes": "request_id is in _NON_SEMANTIC_FIELDS — must not raise DRIFT",
+      "record": {
+        "method": "POST",
+        "uri": "/echo",
+        "body": {"message": "hello"},
+        "expected_status": 200,
+        "expected_body": {"request_id": "00000000-0000-0000-0000-000000000000", "message": "hello"},
+        "label": "echo-normal"
+      }
+    },
+    {
+      "label": "drift-endpoint-tolerable-stable",
+      "family": "tolerable",
+      "app": "api_stable",
+      "expected_verdict": "REPRODUCIBLE_STRICT",
+      "notes": "Stable /drift endpoint replayed against stable app — no drift expected; proves Axiom does not over-fire on this route",
+      "record": {
+        "method": "POST",
+        "uri": "/drift",
+        "body": {"context": "calibration"},
+        "expected_status": 200,
+        "expected_body": {"score": 0.92, "tag": "stable", "processed": true},
+        "label": "drift-stable"
+      }
+    },
+    {
+      "label": "echo-tolerable-stale-request-id",
+      "family": "tolerable",
+      "app": "api_stable",
+      "expected_verdict": "REPRODUCIBLE_SEMANTIC",
+      "notes": "Stale request_id in golden fixture — probe must classify SEMANTIC not DRIFT; key false-positive guard",
+      "record": {
+        "method": "POST",
+        "uri": "/echo",
+        "body": {"value": 42},
+        "expected_status": 200,
+        "expected_body": {"request_id": "stale-fixture-uuid-0000", "value": 42},
+        "label": "echo-stale-id"
+      }
+    },
+    {
+      "label": "drift-dangerous-score-changed",
+      "family": "dangerous",
+      "app": "api_drift",
+      "expected_verdict": "DRIFT_DETECTED",
+      "notes": "Drifted app returns different score and tag — genuine regression; probe must fire DRIFT_DETECTED",
+      "record": {
+        "method": "POST",
+        "uri": "/drift",
+        "body": {"context": "calibration"},
+        "expected_status": 200,
+        "expected_body": {"score": 0.92, "tag": "stable", "processed": true},
+        "label": "drift-golden"
+      }
+    },
+    {
+      "label": "boom-dangerous-500",
+      "family": "dangerous",
+      "app": "api_stable",
+      "expected_verdict": "FAILED_TO_REPLAY",
+      "notes": "/boom always raises RuntimeError → 500; must produce FAILED_TO_REPLAY",
+      "record": {
+        "method": "POST",
+        "uri": "/boom",
+        "body": {},
+        "expected_status": 200,
+        "expected_body": {"result": "ok"},
+        "label": "boom"
+      }
+    }
+  ]
+}

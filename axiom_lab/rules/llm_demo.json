@@ -1,0 +1,54 @@
+{
+  "name": "llm_demo_rules",
+  "version": "1.1",
+  "description": "Business rules for the LLM demo completion endpoint.",
+  "rules": [
+    {
+      "id": "L001",
+      "description": "completion id is a per-call token and must be ignored",
+      "type": "ignore_field",
+      "field": "id"
+    },
+    {
+      "id": "L002",
+      "description": "choices array must be present in every completion response",
+      "type": "required_field",
+      "field": "choices"
+    },
+    {
+      "id": "L003",
+      "description": "usage must be present to allow billing reconciliation",
+      "type": "required_field",
+      "field": "usage"
+    },
+    {
+      "id": "L004",
+      "description": "error field must never appear in a successful completion response",
+      "type": "prohibited_field",
+      "field": "error"
+    },
+    {
+      "id": "L005",
+      "description": "completion text must not be empty — catches INCOHERENT drift mode",
+      "type": "contains_keyword",
+      "field": "choices.0.text",
+      "keyword": " ",
+      "case_sensitive": false
+    },
+    {
+      "id": "L006",
+      "description": "total_tokens must be at least 1 — catches zeroed INCOHERENT usage",
+      "type": "value_in_range",
+      "field": "usage.total_tokens",
+      "min": 1,
+      "max": 100000
+    },
+    {
+      "id": "L007",
+      "description": "finish_reason must be a recognised stop signal",
+      "type": "value_in_set",
+      "field": "choices.0.finish_reason",
+      "allowed": ["stop", "length", "content_filter"]
+    }
+  ]
+}

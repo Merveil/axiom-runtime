@@ -1,0 +1,36 @@
+[
+  {
+    "method": "GET",
+    "uri": "/health",
+    "body": null,
+    "expected_status": 200,
+    "expected_body": {"status": "ok", "version": "1.0.0"},
+    "label": "GET /health"
+  },
+  {
+    "method": "POST",
+    "uri": "/echo",
+    "body": {"message": "hello", "value": 42},
+    "expected_status": 200,
+    "expected_body": {
+      "request_id": "00000000-0000-0000-0000-000000000000",
+      "message": "hello",
+      "value": 42
+    },
+    "label": "POST /echo — basic payload"
+  },
+  {
+    "method": "POST",
+    "uri": "/drift",
+    "body": {"context": "feature_extraction"},
+    "expected_status": 200,
+    "expected_body": {
+      "request_id": "00000000-0000-0000-0000-000000000000",
+      "input_echo": {"context": "feature_extraction"},
+      "score": 0.92,
+      "tag": "stable",
+      "processed": true
+    },
+    "label": "POST /drift — stable mode"
+  }
+]

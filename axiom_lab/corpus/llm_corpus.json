@@ -1,0 +1,108 @@
+{
+  "name": "llm_corpus",
+  "version": "1.0",
+  "description": "Labeled calibration corpus for LLM completion endpoint.",
+  "rules_path": "../rules/llm_demo.json",
+  "cases": [
+    {
+      "label": "completion-normal-semantic",
+      "family": "normal",
+      "app": "llm_stable",
+      "expected_verdict": "REPRODUCIBLE_SEMANTIC",
+      "expected_violations_min": 0,
+      "notes": "id field is _NON_SEMANTIC — stable response must be SEMANTIC with 0 violations",
+      "record": {
+        "method": "POST",
+        "uri": "/v1/completions",
+        "body": {"prompt": "What is the answer?"},
+        "expected_status": 200,
+        "expected_body": {
+          "id": "cmpl-00000000",
+          "object": "text_completion",
+          "choices": [{"text": "The answer is forty-two.", "index": 0, "finish_reason": "stop"}],
+          "usage": {"prompt_tokens": 10, "completion_tokens": 8, "total_tokens": 18}
+        },
+        "label": "completion-stable"
+      }
+    },
+    {
+      "label": "models-normal-strict",
+      "family": "normal",
+      "app": "llm_stable",
+      "expected_verdict": "REPRODUCIBLE_STRICT",
+      "expected_violations_min": 0,
+      "notes": "Static /v1/models list — always byte-identical",
+      "record": {
+        "method": "GET",
+        "uri": "/v1/models",
+        "body": null,
+        "expected_status": 200,
+        "expected_body": {"data": [{"id": "lab-model-v1", "object": "model"}]},
+        "label": "models"
+      }
+    },
+    {
+      "label": "completion-tolerable-variable-wording",
+      "family": "tolerable",
+      "app": "llm_variable",
+      "expected_verdict": "DRIFT_DETECTED",
+      "expected_violations_min": 0,
+      "notes": "VARIABLE_CONTENT: different wording in text field; structurally valid — content/wording drift only",
+      "record": {
+        "method": "POST",
+        "uri": "/v1/completions",
+        "body": {"prompt": "What is the answer?"},
+        "expected_status": 200,
+        "expected_body": {
+          "id": "cmpl-00000000",
+          "object": "text_completion",
+          "choices": [{"text": "The answer is forty-two.", "index": 0, "finish_reason": "stop"}],
+          "usage": {"prompt_tokens": 10, "completion_tokens": 8, "total_tokens": 18}
+        },
+        "label": "completion-variable"
+      }
+    },
+    {
+      "label": "completion-dangerous-missing-choices",
+      "family": "dangerous",
+      "app": "llm_missing",
+      "expected_verdict": "DRIFT_DETECTED",
+      "expected_violations_min": 0,
+      "notes": "MISSING_FIELD: choices absent, error field present — structural regression",
+      "record": {
+        "method": "POST",
+        "uri": "/v1/completions",
+        "body": {"prompt": "What is the answer?"},
+        "expected_status": 200,
+        "expected_body": {
+          "id": "cmpl-00000000",
+          "object": "text_completion",
+          "choices": [{"text": "The answer is forty-two.", "index": 0, "finish_reason": "stop"}],
+          "usage": {"prompt_tokens": 10, "completion_tokens": 8, "total_tokens": 18}
+        },
+        "label": "completion-missing"
+      }
+    },
+    {
+      "label": "completion-dangerous-incoherent",
+      "family": "dangerous",
+      "app": "llm_incoherent",
+      "expected_verdict": "DRIFT_DETECTED",
+      "expected_violations_min": 2,
+      "notes": "INCOHERENT: schema-valid but empty text plus zero tokens plus empty finish_reason — probe fires DRIFT (choices array changed) AND content rules L005/L006/L007 fire",
+      "record": {
+        "method": "POST",
+        "uri": "/v1/completions",
+        "body": {"prompt": "What is the answer?"},
+        "expected_status": 200,
+        "expected_body": {
+          "id": "cmpl-00000000",
+          "object": "text_completion",
+          "choices": [{"text": "The answer is forty-two.", "index": 0, "finish_reason": "stop"}],
+          "usage": {"prompt_tokens": 10, "completion_tokens": 8, "total_tokens": 18}
+        },
+        "label": "completion-incoherent"
+      }
+    }
+  ]
+}

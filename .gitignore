@@ -14,3 +14,7 @@ Thumbs.db
 
 # VS Code
 .vscode/
+
+# Rust build output
+axiom_core/target/
+*.egg-info/
