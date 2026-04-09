@@ -87,11 +87,11 @@ def main() -> None:
     print("  PayPal is preparing to promote v2 of its Payments API to production.")
     print("  Objective: detect anomalies, reproduce bugs, validate the deployment.")
     print()
-    print("  Rules file : examples/paypal_demo/rules.json  (12 rules, all 9 types)")
+    print("  Rules file : examples/paypal_rules.json  (12 rules, all 9 types)")
     print("  Stable     : PayPal API v1  (production baseline)")
     print("  Candidate  : PayPal API v2  (release candidate — 5 regressions injected)")
 
-    rules_path = _EXAMPLES / "paypal_demo" / "rules.json"
+    rules_path = _EXAMPLES / "paypal_rules.json"
     engine     = RulesEngine.from_file(rules_path)
 
     stable_c    = TestClient(stable_app,    raise_server_exceptions=False)

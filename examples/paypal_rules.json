@@ -1,0 +1,101 @@
+{
+  "name":        "paypal_payment_integrity",
+  "version":     "1.0",
+  "description": "Canonical business-integrity rules for PayPal Payments API v2 validation. Covers all 9 Axiom rule types. Derived from PayPal API contract, PCI-DSS v4, and internal settlement-reconciliation policy.",
+
+  "rules": [
+
+    {
+      "id":          "PP001",
+      "type":        "ignore_field",
+      "field":       "created_at",
+      "description": "Request timestamp — changes on every call; non-semantic for behavioral comparison."
+    },
+    {
+      "id":          "PP002",
+      "type":        "ignore_field",
+      "field":       "captured_at",
+      "description": "Capture timestamp — non-semantic; suppressed to avoid false-positive drift."
+    },
+    {
+      "id":          "PP003",
+      "type":        "ignore_field",
+      "field":       "as_of",
+      "description": "Balance snapshot timestamp — non-semantic."
+    },
+
+    {
+      "id":          "PP004",
+      "type":        "required_field",
+      "field":       "fee_amount",
+      "description": "PayPal processing fee MUST be returned on every payment response. Merchants use this field for net-settlement reconciliation. Absence → revenue leakage invisible to downstream accounting systems."
+    },
+    {
+      "id":          "PP005",
+      "type":        "required_field",
+      "field":       "currency",
+      "description": "ISO 4217 currency code is mandatory on all monetary responses. SWIFT and forex routing systems are case-sensitive and reject malformed codes."
+    },
+
+    {
+      "id":          "PP006",
+      "type":        "prohibited_field",
+      "field":       "error_code",
+      "description": "Internal error codes must never appear in payment API responses. PCI-DSS forbids exposing internal system states to external callers."
+    },
+
+    {
+      "id":          "PP007",
+      "type":        "value_in_set",
+      "field":       "status",
+      "allowed":     ["CREATED", "COMPLETED", "FAILED", "REFUNDED", "PENDING_REVIEW"],
+      "description": "Payment FSM state must be a documented value. Undocumented states (e.g. PROCESSING) break downstream payment processors, PSPs, and webhook consumers."
+    },
+    {
+      "id":          "PP008",
+      "type":        "value_in_set",
+      "field":       "currency",
+      "allowed":     ["USD", "EUR", "GBP", "JPY", "CAD", "AUD"],
+      "description": "Currency must be uppercase ISO 4217. Lowercase codes (e.g. 'usd') are rejected by SWIFT messaging and forex settlement systems — silent routing failure."
+    },
+
+    {
+      "id":          "PP009",
+      "type":        "value_in_range",
+      "field":       "fraud_score",
+      "min":         0.0,
+      "max":         0.35,
+      "description": "fraud_score above 0.35 triggers mandatory manual review. A silent pass-through above threshold is a PCI-DSS v4 §10.7 compliance breach. Scores above 0.8 indicate full model failure."
+    },
+
+    {
+      "id":          "PP010",
+      "type":        "contains_keyword",
+      "field":       "decision",
+      "keyword":     "APPROVE",
+      "case_sensitive": true,
+      "description": "Low-risk transactions must carry the literal APPROVE decision. Any other value (REVIEW, DECLINE) for a clean score triggers an unwarranted friction path, blocking legitimate checkouts."
+    },
+
+    {
+      "id":          "PP011",
+      "type":        "numeric_tolerance",
+      "field":       "amount",
+      "tolerance":   0.001,
+      "description": "Monetary amounts must be reproducible to sub-cent precision. Drift beyond 0.001 indicates a floating-point or rounding regression — breaks PCI-DSS auditability and reconciliation."
+    },
+
+    {
+      "id":          "PP012",
+      "type":        "field_consistency",
+      "condition_field":  "status",
+      "condition_value":  "COMPLETED",
+      "target_field":     "net_amount",
+      "constraint":       "value_in_range",
+      "min":              0.01,
+      "max":              1000000.0,
+      "description": "A COMPLETED payment must always carry a positive net_amount. Absence or zero value on a COMPLETED record means settlement records are corrupt — regulatory reporting failure."
+    }
+
+  ]
+}

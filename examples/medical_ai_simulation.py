@@ -125,11 +125,11 @@ def main() -> None:
 
   Stable build  : v1.4       (clinically validated — in production)
   Candidate     : v2.0-rc1   (release candidate — under evaluation)
-  Rules file    : examples/medical_ai_demo/rules.json  (15 rules — all 9 types)
+  Rules file    : examples/medical_ai_rules.json  (15 rules — all 9 types)
 """)
     _hr("═")
 
-    rules_path = _EXAMPLES / "medical_ai_demo" / "rules.json"
+    rules_path = _EXAMPLES / "medical_ai_rules.json"
     engine     = RulesEngine.from_file(rules_path)
     stable_c   = TestClient(stable_app,    raise_server_exceptions=False)
     cand_c     = TestClient(candidate_app, raise_server_exceptions=False)
