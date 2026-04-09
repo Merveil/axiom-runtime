@@ -12,6 +12,7 @@
 
 use pyo3::prelude::*;
 
+mod analytics;
 mod probe;
 mod rules;
 mod stats;
@@ -38,6 +39,9 @@ fn axiom_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     // ── SQLite store ──────────────────────────────────────────────────────
     m.add_class::<store::RustEventStore>()?;
+
+    // ── analytics engines (Phase 7) ───────────────────────────────────────
+    analytics::register(m)?;
 
     Ok(())
 }

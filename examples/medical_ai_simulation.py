@@ -443,6 +443,23 @@ def main() -> None:
     )
     AxiomAnalytics.print_full_analysis(analysis, show_why=True)
 
+    # ── Multi-format export ──────────────────────────────────────────────────
+    _out = Path(__file__).parent.parent / "axiom_lab" / "reports"
+    _out.mkdir(parents=True, exist_ok=True)
+
+    import json as _json
+    (_out / "medical_expert_report.json").write_text(
+        _json.dumps(AxiomAnalytics.to_json(analysis), indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    (_out / "medical_expert_report.md").write_text(
+        AxiomAnalytics.to_markdown(
+            analysis, title="MediAssist AI v2.0-rc1 — Clinical Safety Validation Report"
+        ),
+        encoding="utf-8",
+    )
+    print(f"\n  Reports saved to axiom_lab/reports/medical_expert_report.{{json,md}}")
+
 
 if __name__ == "__main__":
     main()

@@ -1,0 +1,632 @@
+{
+  "report_version": "7.0",
+  "domain": "payments",
+  "verdict": "BLOCK",
+  "severity": {
+    "global_score": 100.0,
+    "base_score": 50.0,
+    "violation_score": 28.0,
+    "fail_score": 0.0,
+    "domain_multiplier": 1.5,
+    "per_endpoint": {
+      "/v1/payments/create": 100.0,
+      "/v1/payments/PAY-FLAGSHIP-001/capture": 100.0,
+      "/v1/transactions/TXN-FLAGSHIP-001": 100.0,
+      "/v1/accounts/ACC-BUSINESS-42/balance": 100.0,
+      "/v1/fraud/score": 100.0
+    }
+  },
+  "confidence": {
+    "score": 0.812,
+    "based_on": {
+      "runs": 5,
+      "consistency": 1.0,
+      "variance": "stable"
+    },
+    "breakdown": {
+      "coverage_factor": 0.3,
+      "consistency_factor": 0.25,
+      "richness_factor": 0.036,
+      "drift_corroboration_factor": 0.187,
+      "deterministic_score": 0.871,
+      "stochastic_score": 0.0,
+      "variance_label": "medium"
+    }
+  },
+  "coverage": {
+    "endpoints": "5/5",
+    "critical_paths": "5/5",
+    "rules_triggered": "6/12",
+    "input_variants": 5,
+    "coverage_matrix": {
+      "endpoints": [
+        "/v1/payments/create",
+        "/v1/payments/PAY-FLAGSHIP-001/capture",
+        "/v1/transactions/TXN-FLAGSHIP-001",
+        "/v1/accounts/ACC-BUSINESS-42/balance",
+        "/v1/fraud/score"
+      ],
+      "rules": [
+        "PP004",
+        "PP005",
+        "PP007",
+        "PP008",
+        "PP009",
+        "PP010"
+      ],
+      "coverage_pct": 46.7,
+      "uncovered_rules": [],
+      "hottest_endpoint": "/v1/transactions/TXN-FLAGSHIP-001",
+      "hottest_rule": "PP004"
+    }
+  },
+  "regression_distribution": {
+    "critical": 14,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "total": 14
+  },
+  "drift": {
+    "magnitude": "CATASTROPHIC",
+    "quantitative": {
+      "/v1/payments/create": [
+        {
+          "field": "/fee_amount",
+          "label": "CATASTROPHIC",
+          "delta": null,
+          "relative_pct": null
+        },
+        {
+          "field": "/fraud_score",
+          "label": "CATASTROPHIC",
+          "delta": 0.75,
+          "relative_pct": 625.0
+        }
+      ],
+      "/v1/payments/PAY-FLAGSHIP-001/capture": [
+        {
+          "field": "/amount",
+          "label": "NEGLIGIBLE",
+          "delta": 0.01,
+          "relative_pct": 0.0
+        },
+        {
+          "field": "/currency",
+          "label": "CHANGED",
+          "delta": null,
+          "relative_pct": null
+        },
+        {
+          "field": "/fee_amount",
+          "label": "CATASTROPHIC",
+          "delta": null,
+          "relative_pct": null
+        },
+        {
+          "field": "/net_amount",
+          "label": "CATASTROPHIC",
+          "delta": null,
+          "relative_pct": null
+        },
+        {
+          "field": "/status",
+          "label": "CHANGED",
+          "delta": null,
+          "relative_pct": null
+        }
+      ],
+      "/v1/transactions/TXN-FLAGSHIP-001": [
+        {
+          "field": "/currency",
+          "label": "CHANGED",
+          "delta": null,
+          "relative_pct": null
+        },
+        {
+          "field": "/fraud_score",
+          "label": "CATASTROPHIC",
+          "delta": 0.75,
+          "relative_pct": 625.0
+        },
+        {
+          "field": "/status",
+          "label": "CHANGED",
+          "delta": null,
+          "relative_pct": null
+        }
+      ],
+      "/v1/accounts/ACC-BUSINESS-42/balance": [
+        {
+          "field": "/currency",
+          "label": "CHANGED",
+          "delta": null,
+          "relative_pct": null
+        }
+      ],
+      "/v1/fraud/score": [
+        {
+          "field": "/decision",
+          "label": "CHANGED",
+          "delta": null,
+          "relative_pct": null
+        },
+        {
+          "field": "/model_version",
+          "label": "CHANGED",
+          "delta": null,
+          "relative_pct": null
+        },
+        {
+          "field": "/score",
+          "label": "CATASTROPHIC",
+          "delta": 0.75,
+          "relative_pct": 625.0
+        }
+      ]
+    }
+  },
+  "root_cause_analysis": {
+    "distribution": {
+      "missing_field": 3,
+      "classification_shift": 6,
+      "numeric_instability": 1,
+      "schema_regression": 3,
+      "semantic_inconsistency": 1
+    },
+    "system_layer_distribution": {
+      "api": 3,
+      "model": 4,
+      "data": 1,
+      "schema": 3,
+      "logic": 3
+    },
+    "mapping": [
+      {
+        "endpoint": "/v1/payments/create",
+        "field": "/fee_amount",
+        "category": "missing_field",
+        "system_layer": "api",
+        "confidence": 0.95
+      },
+      {
+        "endpoint": "/v1/payments/create",
+        "field": "/fraud_score",
+        "category": "classification_shift",
+        "system_layer": "model",
+        "confidence": 0.85
+      },
+      {
+        "endpoint": "/v1/payments/PAY-FLAGSHIP-001/capture",
+        "field": "/amount",
+        "category": "numeric_instability",
+        "system_layer": "data",
+        "confidence": 0.85
+      },
+      {
+        "endpoint": "/v1/payments/PAY-FLAGSHIP-001/capture",
+        "field": "/currency",
+        "category": "schema_regression",
+        "system_layer": "schema",
+        "confidence": 0.8
+      },
+      {
+        "endpoint": "/v1/payments/PAY-FLAGSHIP-001/capture",
+        "field": "/fee_amount",
+        "category": "missing_field",
+        "system_layer": "api",
+        "confidence": 0.95
+      },
+      {
+        "endpoint": "/v1/payments/PAY-FLAGSHIP-001/capture",
+        "field": "/net_amount",
+        "category": "missing_field",
+        "system_layer": "api",
+        "confidence": 0.95
+      },
+      {
+        "endpoint": "/v1/payments/PAY-FLAGSHIP-001/capture",
+        "field": "/status",
+        "category": "classification_shift",
+        "system_layer": "logic",
+        "confidence": 0.8
+      },
+      {
+        "endpoint": "/v1/transactions/TXN-FLAGSHIP-001",
+        "field": "/currency",
+        "category": "schema_regression",
+        "system_layer": "schema",
+        "confidence": 0.8
+      },
+      {
+        "endpoint": "/v1/transactions/TXN-FLAGSHIP-001",
+        "field": "/fraud_score",
+        "category": "classification_shift",
+        "system_layer": "model",
+        "confidence": 0.85
+      },
+      {
+        "endpoint": "/v1/transactions/TXN-FLAGSHIP-001",
+        "field": "/status",
+        "category": "classification_shift",
+        "system_layer": "logic",
+        "confidence": 0.8
+      },
+      {
+        "endpoint": "/v1/accounts/ACC-BUSINESS-42/balance",
+        "field": "/currency",
+        "category": "schema_regression",
+        "system_layer": "schema",
+        "confidence": 0.8
+      },
+      {
+        "endpoint": "/v1/fraud/score",
+        "field": "/decision",
+        "category": "classification_shift",
+        "system_layer": "logic",
+        "confidence": 0.8
+      },
+      {
+        "endpoint": "/v1/fraud/score",
+        "field": "/model_version",
+        "category": "semantic_inconsistency",
+        "system_layer": "model",
+        "confidence": 0.8
+      },
+      {
+        "endpoint": "/v1/fraud/score",
+        "field": "/score",
+        "category": "classification_shift",
+        "system_layer": "model",
+        "confidence": 0.85
+      }
+    ]
+  },
+  "semantic": {
+    "per_endpoint": {
+      "/v1/payments/create": 0.3,
+      "/v1/payments/PAY-FLAGSHIP-001/capture": 0.06,
+      "/v1/transactions/TXN-FLAGSHIP-001": 0.02,
+      "/v1/accounts/ACC-BUSINESS-42/balance": 0.48,
+      "/v1/fraud/score": 0.0
+    },
+    "violations": [
+      {
+        "field": "/fee_amount",
+        "expected": "'fee_amount' must be present in response",
+        "actual": "fee_amount = MISSING"
+      },
+      {
+        "field": "/fraud_score",
+        "expected": "Field 'fraud_score' value 0.87 out of range [0, 0.35]",
+        "actual": "fraud_score = 0.87"
+      },
+      {
+        "field": "/amount",
+        "expected": "'amount' must be present in response",
+        "actual": "amount = 300.0"
+      },
+      {
+        "field": "/currency",
+        "expected": "Field 'currency' value \"usd\" not in allowed set [\"AUD\", \"CAD\", \"EUR\", \"GBP\", \"JP",
+        "actual": "currency = usd"
+      },
+      {
+        "field": "/fee_amount",
+        "expected": "'fee_amount' must be present in response",
+        "actual": "fee_amount = MISSING"
+      },
+      {
+        "field": "/net_amount",
+        "expected": "net_amount ≈ 291 (baseline value)",
+        "actual": "net_amount = MISSING"
+      },
+      {
+        "field": "/status",
+        "expected": "Field 'status' value \"PROCESSING\" not in allowed set [\"COMPLETED\", \"CREATED\", \"F",
+        "actual": "status = PROCESSING"
+      },
+      {
+        "field": "/currency",
+        "expected": "Field 'currency' value \"usd\" not in allowed set [\"AUD\", \"CAD\", \"EUR\", \"GBP\", \"JP",
+        "actual": "currency = usd"
+      },
+      {
+        "field": "/fraud_score",
+        "expected": "Field 'fraud_score' value 0.87 out of range [0, 0.35]",
+        "actual": "fraud_score = 0.87"
+      },
+      {
+        "field": "/status",
+        "expected": "Field 'status' value \"PROCESSING\" not in allowed set [\"COMPLETED\", \"CREATED\", \"F",
+        "actual": "status = PROCESSING"
+      },
+      {
+        "field": "/currency",
+        "expected": "Field 'currency' value \"usd\" not in allowed set [\"AUD\", \"CAD\", \"EUR\", \"GBP\", \"JP",
+        "actual": "currency = usd"
+      },
+      {
+        "field": "/decision",
+        "expected": "'decision' must be present in response",
+        "actual": "decision = REVIEW"
+      },
+      {
+        "field": "/model_version",
+        "expected": "model_version = 'fraud-v3.1' (baseline value)",
+        "actual": "model_version = fraud-v4.0"
+      },
+      {
+        "field": "/score",
+        "expected": "score ≈ 0.12 (baseline value)",
+        "actual": "score = 0.87"
+      }
+    ]
+  },
+  "business_impact": {
+    "financial": {
+      "revenue_loss": "CRITICAL",
+      "chargeback_risk": "HIGH"
+    },
+    "operational": {
+      "sla_breach": "True",
+      "user_blocking": "True"
+    },
+    "regulatory": {
+      "pci": "FAIL",
+      "psd2": "FAIL",
+      "swift": "FAIL"
+    },
+    "regulatory_exposure": [
+      "PCI-DSS v4",
+      "PSD2 Article 45",
+      "SWIFT routing failure"
+    ],
+    "legal_liability": "HIGH"
+  },
+  "stability": {
+    "runs": 5,
+    "verdict_consistency": 1.0,
+    "drift_variance": 0.0,
+    "variance_label": "stable",
+    "trend": "stable",
+    "flaky_endpoints": []
+  },
+  "temporal_consistency": {
+    "same_input_runs": "stable",
+    "drift_over_time": "stable"
+  },
+  "baseline": {
+    "integrity": "VERIFIED",
+    "stability": "HIGH",
+    "replay_match": "100.0%",
+    "n_errors": 0
+  },
+  "rule_trace": {
+    "PP004": {
+      "description": "PayPal processing fee MUST be returned on every payment response. Merchants use this field for net-settlement reconciliation. Absence → revenue leakage invisible to downstream accounting systems.",
+      "triggered_on": [
+        "/v1/payments/create",
+        "/v1/payments/PAY-FLAGSHIP-001/capture",
+        "/v1/transactions/TXN-FLAGSHIP-001",
+        "/v1/accounts/ACC-BUSINESS-42/balance",
+        "/v1/fraud/score"
+      ],
+      "violation_tier": "CRITICAL",
+      "n_hits": 5
+    },
+    "PP009": {
+      "description": "fraud_score above 0.35 triggers mandatory manual review. A silent pass-through above threshold is a PCI-DSS v4 §10.7 compliance breach. Scores above 0.8 indicate full model failure.",
+      "triggered_on": [
+        "/v1/payments/create",
+        "/v1/transactions/TXN-FLAGSHIP-001"
+      ],
+      "violation_tier": "CRITICAL",
+      "n_hits": 2
+    },
+    "PP007": {
+      "description": "Payment FSM state must be a documented value. Undocumented states (e.g. PROCESSING) break downstream payment processors, PSPs, and webhook consumers.",
+      "triggered_on": [
+        "/v1/payments/PAY-FLAGSHIP-001/capture",
+        "/v1/transactions/TXN-FLAGSHIP-001"
+      ],
+      "violation_tier": "CRITICAL",
+      "n_hits": 2
+    },
+    "PP008": {
+      "description": "Currency must be uppercase ISO 4217. Lowercase codes (e.g. 'usd') are rejected by SWIFT messaging and forex settlement systems — silent routing failure.",
+      "triggered_on": [
+        "/v1/payments/PAY-FLAGSHIP-001/capture",
+        "/v1/transactions/TXN-FLAGSHIP-001",
+        "/v1/accounts/ACC-BUSINESS-42/balance"
+      ],
+      "violation_tier": "CRITICAL",
+      "n_hits": 3
+    },
+    "PP005": {
+      "description": "ISO 4217 currency code is mandatory on all monetary responses. SWIFT and forex routing systems are case-sensitive and reject malformed codes.",
+      "triggered_on": [
+        "/v1/fraud/score"
+      ],
+      "violation_tier": "CRITICAL",
+      "n_hits": 1
+    },
+    "PP010": {
+      "description": "Low-risk transactions must carry the literal APPROVE decision. Any other value (REVIEW, DECLINE) for a clean score triggers an unwarranted friction path, blocking legitimate checkouts.",
+      "triggered_on": [
+        "/v1/fraud/score"
+      ],
+      "violation_tier": "CRITICAL",
+      "n_hits": 1
+    }
+  },
+  "explanation": [
+    {
+      "field": "/fee_amount",
+      "expected": "'fee_amount' must be present in response",
+      "actual": "fee_amount = MISSING",
+      "reason": "'fee_amount' was removed from response schema — missing_field regression"
+    },
+    {
+      "field": "/fraud_score",
+      "expected": "Field 'fraud_score' value 0.87 out of range [0, 0.35]",
+      "actual": "fraud_score = 0.87",
+      "reason": "'fraud_score' increased by Δ=+0.75 (×625.0% relative) — classification_shift"
+    },
+    {
+      "field": "/amount",
+      "expected": "'amount' must be present in response",
+      "actual": "amount = 300.0",
+      "reason": "'amount' drifted by Δ=+0.01 — numeric_instability"
+    },
+    {
+      "field": "/currency",
+      "expected": "Field 'currency' value \"usd\" not in allowed set [\"AUD\", \"CAD\", \"EUR\", \"GBP\", \"JP",
+      "actual": "currency = usd",
+      "reason": "'currency' string value changed — schema_regression"
+    },
+    {
+      "field": "/fee_amount",
+      "expected": "'fee_amount' must be present in response",
+      "actual": "fee_amount = MISSING",
+      "reason": "'fee_amount' was removed from response schema — missing_field regression"
+    },
+    {
+      "field": "/net_amount",
+      "expected": "net_amount ≈ 291 (baseline value)",
+      "actual": "net_amount = MISSING",
+      "reason": "'net_amount' was removed from response schema — missing_field regression"
+    },
+    {
+      "field": "/status",
+      "expected": "Field 'status' value \"PROCESSING\" not in allowed set [\"COMPLETED\", \"CREATED\", \"F",
+      "actual": "status = PROCESSING",
+      "reason": "'status' string value changed — classification_shift"
+    },
+    {
+      "field": "/currency",
+      "expected": "Field 'currency' value \"usd\" not in allowed set [\"AUD\", \"CAD\", \"EUR\", \"GBP\", \"JP",
+      "actual": "currency = usd",
+      "reason": "'currency' string value changed — schema_regression"
+    },
+    {
+      "field": "/fraud_score",
+      "expected": "Field 'fraud_score' value 0.87 out of range [0, 0.35]",
+      "actual": "fraud_score = 0.87",
+      "reason": "'fraud_score' increased by Δ=+0.75 (×625.0% relative) — classification_shift"
+    },
+    {
+      "field": "/status",
+      "expected": "Field 'status' value \"PROCESSING\" not in allowed set [\"COMPLETED\", \"CREATED\", \"F",
+      "actual": "status = PROCESSING",
+      "reason": "'status' string value changed — classification_shift"
+    },
+    {
+      "field": "/currency",
+      "expected": "Field 'currency' value \"usd\" not in allowed set [\"AUD\", \"CAD\", \"EUR\", \"GBP\", \"JP",
+      "actual": "currency = usd",
+      "reason": "'currency' string value changed — schema_regression"
+    },
+    {
+      "field": "/decision",
+      "expected": "'decision' must be present in response",
+      "actual": "decision = REVIEW",
+      "reason": "'decision' string value changed — classification_shift"
+    },
+    {
+      "field": "/model_version",
+      "expected": "model_version = 'fraud-v3.1' (baseline value)",
+      "actual": "model_version = fraud-v4.0",
+      "reason": "'model_version' string value changed — semantic_inconsistency"
+    },
+    {
+      "field": "/score",
+      "expected": "score ≈ 0.12 (baseline value)",
+      "actual": "score = 0.87",
+      "reason": "'score' increased by Δ=+0.75 (×625.0% relative) — classification_shift"
+    }
+  ],
+  "counterfactual": {
+    "current_status": "BLOCKED",
+    "current_score": 100.0,
+    "pass_threshold": 40.0,
+    "min_fixes_to_pass": null,
+    "critical_fix_ids": [
+      "PP009",
+      "PP009",
+      "PP004",
+      "PP004",
+      "PP004",
+      "PP004",
+      "PP004",
+      "PP010"
+    ],
+    "scenarios": [
+      {
+        "fixes": "fix [PP009]",
+        "verdict": "BLOCKED",
+        "new_score": 95.4
+      },
+      {
+        "fixes": "fix [PP009 + PP009]",
+        "verdict": "BLOCKED",
+        "new_score": 90.8
+      },
+      {
+        "fixes": "fix [PP009 + PP009 + PP004]",
+        "verdict": "BLOCKED",
+        "new_score": 86.4
+      },
+      {
+        "fixes": "fix [PP009 + PP009 + PP004 + PP004]",
+        "verdict": "BLOCKED",
+        "new_score": 82.1
+      },
+      {
+        "fixes": "fix [PP009 + PP009 + PP004 + PP004 + PP004]",
+        "verdict": "BLOCKED",
+        "new_score": 77.7
+      }
+    ]
+  },
+  "risk_index": {
+    "score": 0.953,
+    "category": "CRITICAL",
+    "components": {
+      "severity_component": 0.4,
+      "confidence_component": 0.203,
+      "critical_density_component": 0.2,
+      "regression_rate_component": 0.15
+    }
+  },
+  "decision": {
+    "action": "BLOCK",
+    "confidence": "MEDIUM",
+    "risk_level": "CRITICAL",
+    "justification": [
+      "all 5 endpoints exhibit behavioral regression",
+      "14 critical rule violation(s) detected",
+      "severity 100/100 exceeds BLOCK threshold (70)",
+      "risk index 0.953 — CRITICAL"
+    ],
+    "rollback_recommended": true
+  },
+  "comparison": {
+    "v1_score": 100.0,
+    "v2_score": 0.0,
+    "severity_delta": 100.0,
+    "regression_delta_pct": 100.0,
+    "verdict": "REGRESSION",
+    "impact_magnitude": "CATASTROPHIC"
+  },
+  "why_axiom_is_right": [
+    "Baseline verified across 5 endpoints — VERIFIED",
+    "Regressions are consistent across 5/5 endpoints (not isolated noise)",
+    "Detected via 1 independent rule categories: required_field",
+    "Root cause distribution: classification_shift ×6; missing_field ×3; schema_regression ×3",
+    "Confidence 81% based on multi-vector corroboration (drift + rule + verdict consistency)",
+    "Severity 100/100 — exceeds BLOCK threshold (70)",
+    "Violations span 14 rule checks across critical business/safety paths"
+  ],
+  "executive_summary": "Axiom detected 5 critical payment regression(s) across 5 endpoints, affecting: merchant fee integrity, fraud scoring accuracy, payment completion FSM, currency routing correctness. Severity: 100/100. Confidence: 81%. Verdict: DEPLOYMENT BLOCKED."
+}
