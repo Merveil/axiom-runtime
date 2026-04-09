@@ -42,6 +42,7 @@ from medical_ai_demo.candidate import app as candidate_app
 
 from axiom_lab.probe        import SessionCapture, replay_session, Verdict
 from axiom_lab.rules_engine import RulesEngine
+from axiom_lab.analytics    import AxiomAnalytics
 
 # ── Visual layout ─────────────────────────────────────────────────────────────
 
@@ -428,6 +429,19 @@ def main() -> None:
     print()
     _hr("═")
     print()
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Phase 5 — Axiom Intelligence Report
+    # ──────────────────────────────────────────────────────────────────────────
+    _section("Phase 5 — Axiom Intelligence Report", "═")
+    analysis = AxiomAnalytics.build(
+        records   = cap.records,
+        reports   = reports,
+        evaluated = evaluated,
+        rules_meta = {"total_rules": len(engine._rules)},
+        domain    = "medical",
+    )
+    AxiomAnalytics.print_full_analysis(analysis, show_why=True)
 
 
 if __name__ == "__main__":
